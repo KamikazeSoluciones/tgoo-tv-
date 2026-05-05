@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TGOO Panel</title>
+
+<style>
+body {
+  margin:0;
+  font-family:sans-serif;
+  color:white;
+  background: url('bg.png') center/cover no-repeat;
+}
+
+.overlay {
+  background: rgba(0,0,0,0.75);
+  height:100vh;
+  padding:40px;
+}
+
+.logo {
+  display:block;
+  margin:0 auto 20px;
+  width:100px;
+}
+
+h1 {
+  text-align:center;
+  margin-bottom:40px;
+}
+
+.container {
+  display:flex;
+  justify-content:space-around;
+}
+
+.box {
+  width:40%;
+  border:1px dashed rgba(255,255,255,0.3);
+  padding:30px;
+  text-align:center;
+}
+
+.upload-btn {
+  background:#ff3b3b;
+  padding:10px 20px;
+  cursor:pointer;
+  display:inline-block;
+  margin-top:10px;
+}
+
+button {
+  background:#ff3b3b;
+  color:white;
+  border:none;
+  padding:10px 20px;
+  cursor:pointer;
+  margin-top:10px;
+}
+
+.status {
+  margin-top:10px;
+  font-size:14px;
+  color:#00ff88;
+}
+
+.preview {
+  margin-top:15px;
+}
+
+.preview img, .preview video {
+  width:100%;
+  max-height:160px;
+  object-fit:cover;
+}
+</style>
+</head>
+
+<body>
+
+<div class="overlay">
+
+<img src="logo.png" class="logo">
+
+<h1>🔥 TGOO PANEL CONTROL</h1>
+
+<div class="container">
+
+  <!-- MAIN -->
+  <div class="box">
+    <h2>MAIN</h2>
+    <p>Arrasta ou seleciona</p>
+
+    <input type="file" id="mainInput" multiple style="display:none">
+    <div class="upload-btn" onclick="document.getElementById('mainInput').click()">Upload</div>
+
+    <div class="status" id="mainStatus"></div>
+    <div class="preview" id="mainPreview"></div>
+
+    <button onclick="clearMain()">Limpar</button>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="box">
+    <h2>SIDEBAR</h2>
+    <p>Arrasta ou seleciona</p>
+
+    <input type="file" id="sidebarInput" multiple style="display:none">
+    <div class="upload-btn" onclick="document.getElementById('sidebarInput').click()">Upload</div>
+
+    <div class="status" id="sidebarStatus"></div>
+    <div class="preview" id="sidebarPreview"></div>
+
+    <button onclick="clearSidebar()">Limpar</button>
+  </div>
+
+</div>
+
+<!-- URL -->
+<div style="text-align:center; margin-top:40px;">
+  <input id="urlInput" placeholder="Cole URL (YouTube, vídeo, imagem...)" style="width:50%; padding:10px;">
+  <br><br>
+  <button onclick="addURL('main')">+ MAIN</button>
+  <button onclick="addURL('sidebar')">+ SIDEBAR</button>
+</div>
+
+</div>
+
+<script>
+
+// ===== UPLOAD =====
+document.getElementById("mainInput").addEventListener("change", () => upload("main"));
+document.getElementById("sidebarInput").addEventListener("change", () => upload("sidebar"));
+
+async function upload(target) {
+
+  const input = document.getElementById(target + "Input");
+  const preview = document.getElementById(target + "Preview");
+  const status = document.getElementById(target + "Status");
+
+  status.innerText = "A carregar...";
+  preview.innerHTML = "";
+
+  for (let file of input.files) {
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    await fetch(`http://localhost:3000/upload/${target}`, {
+      method:"POST",
+      body:formData
+    });
+
+    const url = URL.createObjectURL(file);
+
+    if (file.type.includes("video")) {
+      preview.innerHTML += `<video src="${url}" autoplay muted loop></video>`;
+    } else {
+      preview.innerHTML += `<img src="${url}">`;
+    }
+  }
+
+  status.innerText = "✔ Subido correctamente";
+}
+
+// ===== URL =====
+async function addURL(target) {
+  const url = document.getElementById("urlInput").value;
+
+  await fetch("http://localhost:3000/upload/url", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ url, target })
+  });
+
+  alert("URL adicionada");
+}
+
+// ===== CLEAR =====
+async function clearMain() {
+  await fetch("http://localhost:3000/clear/main", { method:"DELETE" });
+
+  document.getElementById("mainPreview").innerHTML = "";
+  document.getElementById("mainStatus").innerText = "";
+
+  alert("MAIN limpo");
+}
+
+async function clearSidebar() {
+  await fetch("http://localhost:3000/clear/sidebar", { method:"DELETE" });
+
+  document.getElementById("sidebarPreview").innerHTML = "";
+  document.getElementById("sidebarStatus").innerText = "";
+
+  alert("SIDEBAR limpo");
+}
+
+</script>
+
+</body>
+</html>

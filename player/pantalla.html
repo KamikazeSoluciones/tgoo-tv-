@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+body {
+  margin:0;
+  display:flex;
+  height:100vh;
+  background:black;
+}
+
+.main { width:75%; }
+
+.sidebar {
+  width:25%;
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+video, img, iframe {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border:none;
+}
+</style>
+
+<!-- 🔥 YOUTUBE API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
+</head>
+
+<body>
+
+<div class="main" id="main"></div>
+<div class="sidebar" id="sidebar"></div>
+
+<script>
+
+const API = "http://localhost:3000/data";
+
+let mainList = [];
+let sidebarList = [];
+
+let mainIndex = 0;
+let sidebarIndex = 0;
+
+let ytPlayer = null;
+
+// ===== FETCH DATA =====
+async function fetchData() {
+  try {
+    const res = await fetch(API);
+    const data = await res.json();
+
+    if (JSON.stringify(data.main) !== JSON.stringify(mainList)) {
+      mainList = data.main || [];
+      mainIndex = 0;
+      playMain();
+    }
+
+    if (JSON.stringify(data.sidebar) !== JSON.stringify(sidebarList)) {
+      sidebarList = data.sidebar || [];
+      sidebarIndex = 0;
+      playSidebar();
+    }
+
+  } catch (err) {
+    console.log("API error", err);
+  }
+}
+
+setInterval(fetchData, 3000);
+
+// ===== MAIN PLAYER =====
+function playMain() {
+
+  const container = document.getElementById("main");
+  container.innerHTML = "";
+
+  // 🧹 limpiar YouTube anterior
+  if (ytPlayer) {
+    ytPlayer.destroy();
+    ytPlayer = null;
+  }
+
+  if (!mainList.length) {
+    container.innerHTML = "<h2 style='color:white'>Sin contenido</h2>";
+    return;
+  }
+
+  const item = mainList[mainIndex];
+
+  // ===== VIDEO =====
+  if (item.type === "video") {
+
+    const v = document.createElement("video");
+    v.src = item.src;
+    v.autoplay = true;
+    v.muted = true;
+    v.playsInline = true;
+
+    v.onended = nextMain;
+
+    container.appendChild(v);
+  }
+
+  // ===== YOUTUBE PRO (API) =====
+  else if (item.type === "youtube") {
+
+    let videoId = "";
+
+    if (item.src.includes("watch?v=")) {
+      videoId = item.src.split("watch?v=")[1].split("&")[0];
+    } else if (item.src.includes("youtu.be")) {
+      videoId = item.src.split("youtu.be/")[1].split("?")[0];
+    }
+
+    container.innerHTML = '<div id="yt-player"></div>';
+
+    function loadYT() {
+
+      ytPlayer = new YT.Player('yt-player', {
+        videoId: videoId,
+        playerVars: {
+          autoplay: 1,
+          mute: 1,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0
+        },
+        events: {
+          onReady: (e) => e.target.playVideo(),
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED) {
+              nextMain();
+            }
+          }
+        }
+      });
+    }
+
+    if (typeof YT !== "undefined" && YT.Player) {
+      loadYT();
+    } else {
+      window.onYouTubeIframeAPIReady = loadYT;
+    }
+  }
+
+  // ===== IMAGE =====
+  else {
+
+    const img = document.createElement("img");
+    img.src = item.src;
+
+    container.appendChild(img);
+
+    setTimeout(nextMain, 60000);
+  }
+}
+
+function nextMain() {
+  mainIndex = (mainIndex + 1) % mainList.length;
+  playMain();
+}
+
+// ===== SIDEBAR PLAYER =====
+function playSidebar() {
+
+  const container = document.getElementById("sidebar");
+  container.innerHTML = "";
+
+  if (!sidebarList.length) return;
+
+  const item = sidebarList[sidebarIndex];
+
+  if (item.type === "video") {
+
+    const v = document.createElement("video");
+    v.src = item.src;
+    v.autoplay = true;
+    v.muted = true;
+    v.loop = true;
+
+    container.appendChild(v);
+
+    setTimeout(nextSidebar, 8000);
+  }
+
+  else if (item.type === "youtube") {
+
+    let videoId = "";
+
+    if (item.src.includes("watch?v=")) {
+      videoId = item.src.split("watch?v=")[1].split("&")[0];
+    } else if (item.src.includes("youtu.be")) {
+      videoId = item.src.split("youtu.be/")[1].split("?")[0];
+    }
+
+    const iframe = document.createElement("iframe");
+
+    iframe.src =
+      `https://www.youtube-nocookie.com/embed/${videoId}` +
+      `?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}` +
+      `&modestbranding=1&rel=0`;
+
+    container.appendChild(iframe);
+
+    setTimeout(nextSidebar, 20000);
+  }
+
+  else {
+
+    const img = document.createElement("img");
+    img.src = item.src;
+
+    container.appendChild(img);
+
+    setTimeout(nextSidebar, 5000);
+  }
+}
+
+function nextSidebar() {
+  sidebarIndex = (sidebarIndex + 1) % sidebarList.length;
+  playSidebar();
+}
+
+// INIT
+fetchData();
+
+</script>
+
+</body>
+</html>
