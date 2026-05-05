@@ -8,11 +8,12 @@ require("dotenv").config();
 
 const app = express();
 
+// ===== MIDDLEWARE =====
 app.use(cors());
 app.use(express.json());
 
-// 🔥 STATIC FILES
-app.use(express.static(path.join(__dirname, "../player")));
+// 🔥 STATIC FILES (PLAYER + PANEL)
+app.use("/", express.static(path.join(__dirname, "../player")));
 app.use("/panel", express.static(path.join(__dirname, "../panel")));
 
 // ===== CLOUDINARY =====
@@ -24,13 +25,14 @@ cloudinary.config({
 
 // ===== MULTER =====
 const upload = multer({
-  dest: "uploads/",
-  limits: { fileSize: 100 * 1024 * 1024 }
+  dest: path.join(__dirname, "uploads"),
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB
 });
 
 // ===== DATA FILE =====
 const DATA_FILE = path.join(__dirname, "data.json");
 
+// INIT FILE
 if (!fs.existsSync(DATA_FILE)) {
   fs.writeFileSync(DATA_FILE, JSON.stringify({
     main: [],
@@ -38,36 +40,45 @@ if (!fs.existsSync(DATA_FILE)) {
   }, null, 2));
 }
 
+// ===== HELPERS =====
+function readData() {
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE));
+  } catch {
+    return { main: [], sidebar: [] };
+  }
+}
+
+function writeData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
 // ===== GET DATA =====
 app.get("/data", (req, res) => {
-  try {
-    const data = JSON.parse(fs.readFileSync(DATA_FILE));
-    res.json(data);
-  } catch {
-    res.json({ main: [], sidebar: [] });
-  }
+  res.json(readData());
 });
 
-// ===== UPLOAD MAIN =====
-app.post("/upload/main", upload.single("file"), async (req, res) => {
+// ===== UPLOAD MAIN (MULTI) =====
+app.post("/upload/main", upload.array("files"), async (req, res) => {
   try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "auto",
-      folder: "tgoo/main"
-    });
+    const data = readData();
 
-    fs.unlinkSync(req.file.path);
+    for (const file of req.files) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        resource_type: "auto",
+        folder: "tgoo/main"
+      });
 
-    let data = JSON.parse(fs.readFileSync(DATA_FILE));
+      fs.unlinkSync(file.path);
 
-    data.main.push({
-      type: result.resource_type === "video" ? "video" : "image",
-      src: result.secure_url
-    });
+      data.main.push({
+        type: result.resource_type === "video" ? "video" : "image",
+        src: result.secure_url
+      });
+    }
 
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-
-    res.json(result);
+    writeData(data);
+    res.json({ success: true });
 
   } catch (err) {
     console.log(err);
@@ -75,26 +86,27 @@ app.post("/upload/main", upload.single("file"), async (req, res) => {
   }
 });
 
-// ===== UPLOAD SIDEBAR =====
-app.post("/upload/sidebar", upload.single("file"), async (req, res) => {
+// ===== UPLOAD SIDEBAR (MULTI) =====
+app.post("/upload/sidebar", upload.array("files"), async (req, res) => {
   try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "auto",
-      folder: "tgoo/sidebar"
-    });
+    const data = readData();
 
-    fs.unlinkSync(req.file.path);
+    for (const file of req.files) {
+      const result = await cloudinary.uploader.upload(file.path, {
+        resource_type: "auto",
+        folder: "tgoo/sidebar"
+      });
 
-    let data = JSON.parse(fs.readFileSync(DATA_FILE));
+      fs.unlinkSync(file.path);
 
-    data.sidebar.push({
-      type: result.resource_type === "video" ? "video" : "image",
-      src: result.secure_url
-    });
+      data.sidebar.push({
+        type: result.resource_type === "video" ? "video" : "image",
+        src: result.secure_url
+      });
+    }
 
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-
-    res.json(result);
+    writeData(data);
+    res.json({ success: true });
 
   } catch (err) {
     console.log(err);
@@ -116,8 +128,7 @@ app.post("/upload/url", (req, res) => {
     type = "video";
   }
 
-  let data = JSON.parse(fs.readFileSync(DATA_FILE));
-
+  const data = readData();
   const item = { type, src: url };
 
   if (target === "sidebar") {
@@ -126,27 +137,28 @@ app.post("/upload/url", (req, res) => {
     data.main.push(item);
   }
 
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
-
+  writeData(data);
   res.send("URL añadida");
 });
 
 // ===== CLEAR =====
 app.delete("/clear/main", (req, res) => {
-  let data = JSON.parse(fs.readFileSync(DATA_FILE));
+  const data = readData();
   data.main = [];
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  writeData(data);
   res.send("MAIN limpiado");
 });
 
 app.delete("/clear/sidebar", (req, res) => {
-  let data = JSON.parse(fs.readFileSync(DATA_FILE));
+  const data = readData();
   data.sidebar = [];
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  writeData(data);
   res.send("SIDEBAR limpiado");
 });
 
-// ===== START =====
-app.listen(3000, () => {
-  console.log("🔥 Backend corriendo en http://localhost:3000");
+// ===== START SERVER (RENDER READY) =====
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🔥 Backend corriendo en puerto ${PORT}`);
 });
