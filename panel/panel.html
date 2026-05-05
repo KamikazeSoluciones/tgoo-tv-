@@ -9,19 +9,11 @@ body {
   margin:0;
   font-family:sans-serif;
   color:white;
-  background: url('bg.png') center/cover no-repeat;
+  background:#000;
 }
 
 .overlay {
-  background: rgba(0,0,0,0.75);
-  height:100vh;
   padding:40px;
-}
-
-.logo {
-  display:block;
-  margin:0 auto 20px;
-  width:100px;
 }
 
 h1 {
@@ -64,14 +56,11 @@ button {
   color:#00ff88;
 }
 
-.preview {
-  margin-top:15px;
-}
-
 .preview img, .preview video {
   width:100%;
-  max-height:160px;
+  max-height:150px;
   object-fit:cover;
+  margin-top:10px;
 }
 </style>
 </head>
@@ -80,45 +69,38 @@ button {
 
 <div class="overlay">
 
-<img src="logo.png" class="logo">
-
-<h1>🔥 TGOO PANEL CONTROL</h1>
+<h1>🔥 TGOO PANEL</h1>
 
 <div class="container">
 
-  <!-- MAIN -->
-  <div class="box">
-    <h2>MAIN</h2>
-    <p>Arrasta ou seleciona</p>
+<div class="box">
+  <h2>MAIN</h2>
 
-    <input type="file" id="mainInput" multiple style="display:none">
-    <div class="upload-btn" onclick="document.getElementById('mainInput').click()">Upload</div>
+  <input type="file" id="mainInput" multiple hidden>
+  <div class="upload-btn" onclick="mainInput.click()">Upload</div>
 
-    <div class="status" id="mainStatus"></div>
-    <div class="preview" id="mainPreview"></div>
+  <div id="mainStatus" class="status"></div>
+  <div id="mainPreview" class="preview"></div>
 
-    <button onclick="clearMain()">Limpar</button>
-  </div>
+  <button onclick="clearMain()">Limpar</button>
+</div>
 
-  <!-- SIDEBAR -->
-  <div class="box">
-    <h2>SIDEBAR</h2>
-    <p>Arrasta ou seleciona</p>
+<div class="box">
+  <h2>SIDEBAR</h2>
 
-    <input type="file" id="sidebarInput" multiple style="display:none">
-    <div class="upload-btn" onclick="document.getElementById('sidebarInput').click()">Upload</div>
+  <input type="file" id="sidebarInput" multiple hidden>
+  <div class="upload-btn" onclick="sidebarInput.click()">Upload</div>
 
-    <div class="status" id="sidebarStatus"></div>
-    <div class="preview" id="sidebarPreview"></div>
+  <div id="sidebarStatus" class="status"></div>
+  <div id="sidebarPreview" class="preview"></div>
 
-    <button onclick="clearSidebar()">Limpar</button>
-  </div>
+  <button onclick="clearSidebar()">Limpar</button>
+</div>
 
 </div>
 
-<!-- URL -->
 <div style="text-align:center; margin-top:40px;">
-  <input id="urlInput" placeholder="Cole URL (YouTube, vídeo, imagem...)" style="width:50%; padding:10px;">
+  <input id="urlInput" placeholder="URL (YouTube, video, imagen)" style="width:60%; padding:10px;">
   <br><br>
   <button onclick="addURL('main')">+ MAIN</button>
   <button onclick="addURL('sidebar')">+ SIDEBAR</button>
@@ -128,9 +110,14 @@ button {
 
 <script>
 
+const API = "https://tgoo-tv.onrender.com";
+
+// 🔥 WAKE BACKEND
+fetch(API + "/data").catch(()=>{});
+
 // ===== UPLOAD =====
-document.getElementById("mainInput").addEventListener("change", () => upload("main"));
-document.getElementById("sidebarInput").addEventListener("change", () => upload("sidebar"));
+mainInput.onchange = () => upload("main");
+sidebarInput.onchange = () => upload("sidebar");
 
 async function upload(target) {
 
@@ -138,61 +125,59 @@ async function upload(target) {
   const preview = document.getElementById(target + "Preview");
   const status = document.getElementById(target + "Status");
 
-  status.innerText = "A carregar...";
+  status.innerText = "Subiendo...";
   preview.innerHTML = "";
 
   for (let file of input.files) {
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("files", file); // 🔥 IMPORTANTE
 
-    await fetch(`http://localhost:3000/upload/${target}`, {
-      method:"POST",
-      body:formData
-    });
+    try {
+      await fetch(`${API}/upload/${target}`, {
+        method:"POST",
+        body:formData
+      });
 
-    const url = URL.createObjectURL(file);
+      const url = URL.createObjectURL(file);
 
-    if (file.type.includes("video")) {
-      preview.innerHTML += `<video src="${url}" autoplay muted loop></video>`;
-    } else {
-      preview.innerHTML += `<img src="${url}">`;
+      if (file.type.includes("video")) {
+        preview.innerHTML += `<video src="${url}" autoplay muted loop></video>`;
+      } else {
+        preview.innerHTML += `<img src="${url}">`;
+      }
+
+    } catch (e) {
+      console.log("upload error", e);
     }
   }
 
-  status.innerText = "✔ Subido correctamente";
+  status.innerText = "✔ OK";
 }
 
 // ===== URL =====
 async function addURL(target) {
+
   const url = document.getElementById("urlInput").value;
 
-  await fetch("http://localhost:3000/upload/url", {
+  await fetch(`${API}/upload/url`, {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ url, target })
   });
 
-  alert("URL adicionada");
+  alert("URL añadida");
 }
 
 // ===== CLEAR =====
 async function clearMain() {
-  await fetch("http://localhost:3000/clear/main", { method:"DELETE" });
-
-  document.getElementById("mainPreview").innerHTML = "";
-  document.getElementById("mainStatus").innerText = "";
-
-  alert("MAIN limpo");
+  await fetch(`${API}/clear/main`, { method:"DELETE" });
+  mainPreview.innerHTML = "";
 }
 
 async function clearSidebar() {
-  await fetch("http://localhost:3000/clear/sidebar", { method:"DELETE" });
-
-  document.getElementById("sidebarPreview").innerHTML = "";
-  document.getElementById("sidebarStatus").innerText = "";
-
-  alert("SIDEBAR limpo");
+  await fetch(`${API}/clear/sidebar`, { method:"DELETE" });
+  sidebarPreview.innerHTML = "";
 }
 
 </script>
