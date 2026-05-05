@@ -51,7 +51,7 @@ video, img, iframe {
 
 <script>
 
-const API = "https://tgoo-tv.onrender.com/data";
+const API = "https://tgoo-tv.onrender.com/data?t=" + Date.now();
 
 let dataCache = null;
 let mainIndex = 0;
@@ -60,7 +60,7 @@ let sidebarIndex = 0;
 // ================= FETCH =================
 async function getData() {
   try {
-    const res = await fetch(API + "?t=" + Date.now(), { cache: "no-store" });
+    const res = await fetch(API + "?t=" + Date.now());
     const data = await res.json();
 
     if (!data) return;
@@ -86,7 +86,6 @@ function renderMain() {
 
   container.innerHTML = "";
 
-  // ===== VIDEO =====
   if (item.type === "video") {
 
     const v = document.createElement("video");
@@ -95,16 +94,14 @@ function renderMain() {
     v.autoplay = true;
     v.playsInline = true;
 
+    container.appendChild(v);
+
+    v.play().catch(()=>{});
+
     v.onended = nextMain;
 
-    v.onloadeddata = () => {
-      v.play().catch(()=>{});
-    };
-
-    container.appendChild(v);
   }
 
-  // ===== YOUTUBE =====
   else if (item.type === "youtube") {
 
     let id = "";
@@ -117,20 +114,15 @@ function renderMain() {
 
     const iframe = document.createElement("iframe");
 
-    iframe.src =
-      `https://www.youtube-nocookie.com/embed/${id}?` +
-      `autoplay=1&mute=1&controls=0&rel=0&playsinline=1`;
-
-    iframe.allow = "autoplay; encrypted-media";
-    iframe.allowFullscreen = true;
+    iframe.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&controls=0&rel=0`;
+    iframe.allow = "autoplay";
 
     container.appendChild(iframe);
 
-    // ⚠️ fallback (YouTube no dispara ended en iframe)
-    setTimeout(nextMain, 60000); // 60s mejor que 20s
+    setTimeout(nextMain, 20000);
+
   }
 
-  // ===== IMAGE =====
   else {
 
     const img = document.createElement("img");
@@ -162,21 +154,7 @@ function renderSidebar() {
 
   container.innerHTML = "";
 
-  if (item.type === "video") {
-
-    const v = document.createElement("video");
-    v.src = item.src;
-    v.muted = true;
-    v.autoplay = true;
-    v.loop = true;
-    v.playsInline = true;
-
-    container.appendChild(v);
-
-    setTimeout(nextSidebar, 10000);
-  }
-
-  else {
+  if (item.type === "image") {
 
     const img = document.createElement("img");
     img.src = item.src;
@@ -194,13 +172,19 @@ function nextSidebar() {
 }
 
 // ================= LOOP =================
+
+// 🔥 LOOP PRINCIPAL
 async function loop() {
   await getData();
+
   renderMain();
   renderSidebar();
 }
 
+// arranque inmediato
 loop();
+
+// refresh cada 5s
 setInterval(loop, 5000);
 
 </script>
