@@ -2,17 +2,17 @@
   "main": [
     {
       "type": "youtube",
-      "src": "https://youtu.be/raczSTpj8qE?si=AtOVNwAJf_oaexwt"
+      "src": "https://www.youtube.com/watch?v=jMkxeBWl_F4"
     },
     {
       "type": "video",
-      "src": "https://res.cloudinary.com/dhhb7xxo5/video/upload/v1778000654/tgoo/main/sl97e2iazebsicqfvcny.mp4"
+      "src": "https://res.cloudinary.com/dhhb7xxo5/video/upload/v1778013946/tgoo/main/qu7mylkshksn2cw5t7vw.mp4"
     }
   ],
   "sidebar": [
     {
       "type": "image",
-      "src": "https://res.cloudinary.com/dhhb7xxo5/image/upload/v1778000723/tgoo/sidebar/wt70qmfeopk0rxdeq5vu.png"
+      "src": "https://res.cloudinary.com/dhhb7xxo5/image/upload/v1778012839/tgoo/sidebar/ajhg4rrcs49zw9zww3gh.png"
     }
   ]
 }
